@@ -1,312 +1,524 @@
 import { useRef, useState } from "react";
 import "./App.css";
+import Swal from "sweetalert2";
 
 function App() {
   const fileInputRef = useRef(null);
 
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
   const [targetSize, setTargetSize] = useState("");
-  const [compressedFile, setCompressedFile] = useState(null);
+  const [compressedFiles, setCompressedFiles] = useState([]);
   const [isCompressing, setIsCompressing] = useState(false);
 
+  // Open file picker
   const handleChooseImage = () => {
-    fileInputRef.current.click();
+    fileInputRef.current?.click();
   };
 
+  // Add selected images
   const handleFileChange = (event) => {
-    const file = event.target.files[0];
+    const files = Array.from(event.target.files);
 
-    if (!file) return;
+    if (files.length === 0) return;
 
-    setSelectedFile(file);
-    setCompressedFile(null);
+    const newFiles = files.map((file) => ({
+      id: `${file.name}-${file.size}-${Date.now()}-${Math.random()}`,
+      file,
+      preview: URL.createObjectURL(file),
+    }));
+
+    setSelectedFiles((prev) => [...prev, ...newFiles]);
+    setCompressedFiles([]);
+
+    event.target.value = "";
   };
 
-const compressImage = () => {
-  if (!selectedFile) {
-    alert("Please select an image first.");
-    return;
-  }
+  // Remove one selected image
+  const removeImage = (id) => {
+    setSelectedFiles((prev) => {
+      const imageToRemove = prev.find(
+        (item) => item.id === id
+      );
 
-  if (!targetSize || Number(targetSize) <= 0) {
-    alert("Please enter a required size.");
-    return;
-  }
+      if (imageToRemove) {
+        URL.revokeObjectURL(imageToRemove.preview);
+      }
 
-  setIsCompressing(true);
+      return prev.filter((item) => item.id !== id);
+    });
 
-  const targetBytes = Number(targetSize) * 1024;
+    setCompressedFiles([]);
+  };
 
-  const image = new Image();
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
+  // Compress one image
+  const compressSingleImage = (file, targetBytes) => {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      const objectUrl = URL.createObjectURL(file);
 
-  image.onload = async () => {
-    canvas.width = image.width;
-    canvas.height = image.height;
+      image.onload = async () => {
+        try {
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
 
-    ctx.drawImage(image, 0, 0);
+          canvas.width = image.width;
+          canvas.height = image.height;
 
-    const getBlob = (quality) => {
-      return new Promise((resolve) => {
-        canvas.toBlob(
-          (blob) => resolve(blob),
-          "image/jpeg",
-          quality
-        );
+          ctx.drawImage(image, 0, 0);
+
+          const getBlob = (quality) => {
+            return new Promise((resolveBlob) => {
+              canvas.toBlob(
+                (blob) => resolveBlob(blob),
+                "image/jpeg",
+                quality
+              );
+            });
+          };
+
+          let low = 0.01;
+          let high = 1;
+
+          let bestBlob = null;
+          let bestDifference = Infinity;
+
+          for (let i = 0; i < 20; i++) {
+            const quality = (low + high) / 2;
+
+            const blob = await getBlob(quality);
+
+            if (!blob) continue;
+
+            const difference = Math.abs(
+              blob.size - targetBytes
+            );
+
+            if (difference < bestDifference) {
+              bestDifference = difference;
+              bestBlob = blob;
+            }
+
+            if (blob.size > targetBytes) {
+              high = quality;
+            } else {
+              low = quality;
+            }
+          }
+
+          if (!bestBlob) {
+            reject(
+              new Error("Could not compress image.")
+            );
+            return;
+          }
+
+          // Temporary padding approach.
+          // We will replace this with the proper exact-size
+          // JPEG algorithm later.
+          let finalBlob = bestBlob;
+
+          if (bestBlob.size < targetBytes) {
+            const paddingSize =
+              targetBytes - bestBlob.size;
+
+            const padding = new Uint8Array(
+              paddingSize
+            );
+
+            finalBlob = new Blob(
+              [bestBlob, padding],
+              {
+                type: "image/jpeg",
+              }
+            );
+          }
+
+          const fileName =
+            file.name.substring(
+              0,
+              file.name.lastIndexOf(".")
+            ) || "image";
+
+          const finalFile = new File(
+            [finalBlob],
+            `compressed-${fileName}.jpg`,
+            {
+              type: "image/jpeg",
+            }
+          );
+
+          resolve(finalFile);
+        } catch (error) {
+          reject(error);
+        } finally {
+          URL.revokeObjectURL(objectUrl);
+        }
+      };
+
+      image.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error("Could not load image."));
+      };
+
+      image.src = objectUrl;
+    });
+  };
+
+  // Compress all images
+  const compressImages = async () => {
+    if (selectedFiles.length === 0) {
+      Swal.fire({
+        icon: "warning",
+        title: "No images selected",
+        text: "Please select at least one image.",
+        confirmButtonText: "Okay",
       });
-    };
-
-    /*
-      Binary search for the JPEG quality
-      that produces a file closest to the target size.
-    */
-
-    let low = 0.01;
-    let high = 1;
-    let bestBlob = null;
-    let bestDifference = Infinity;
-
-    for (let i = 0; i < 20; i++) {
-      const quality = (low + high) / 2;
-
-      const blob = await getBlob(quality);
-
-      const difference = Math.abs(blob.size - targetBytes);
-
-      if (difference < bestDifference) {
-        bestDifference = difference;
-        bestBlob = blob;
-      }
-
-      if (blob.size > targetBytes) {
-        high = quality;
-      } else {
-        low = quality;
-      }
-    }
-
-    if (!bestBlob) {
-      setIsCompressing(false);
-      alert("Could not compress image.");
       return;
     }
 
-    console.log("Target:", targetBytes, "bytes");
-    console.log("Closest:", bestBlob.size, "bytes");
-
-    /*
-      If the closest result is smaller than the target,
-      we will add padding bytes so the final file reaches
-      the exact requested size.
-
-      NOTE:
-      This creates a valid file only when the padding is added
-      in a way the JPEG format can safely ignore.
-    */
-
-    let finalBlob = bestBlob;
-
-    if (bestBlob.size < targetBytes) {
-      const paddingSize = targetBytes - bestBlob.size;
-
-      const padding = new Uint8Array(paddingSize);
-
-      finalBlob = new Blob(
-        [bestBlob, padding],
-        {
-          type: "image/jpeg",
-        }
-      );
+    if (!targetSize || Number(targetSize) <= 0) {
+      Swal.fire({
+        icon: "warning",
+        title: "Target size required",
+        text: "Please enter the required image size.",
+        confirmButtonText: "Okay",
+      });
+      return;
     }
 
-    const finalFile = new File(
-      [finalBlob],
-      `compressed-${selectedFile.name.split(".")[0]}.jpg`,
-      {
-        type: "image/jpeg",
+    setIsCompressing(true);
+    setCompressedFiles([]);
+
+    const targetBytes = Number(targetSize) * 1024;
+
+    try {
+      const results = [];
+
+      for (const item of selectedFiles) {
+        const compressed = await compressSingleImage(
+          item.file,
+          targetBytes
+        );
+
+        results.push({
+          id: item.id,
+          originalFile: item.file,
+          compressedFile: compressed,
+          preview: item.preview,
+        });
       }
-    );
 
-    console.log(
-      "FINAL SIZE:",
-      finalFile.size,
-      "bytes"
-    );
-
-    console.log(
-      "FINAL SIZE:",
-      (finalFile.size / 1024).toFixed(2),
-      "KB"
-    );
-
-    setCompressedFile(finalFile);
-    setIsCompressing(false);
+      setCompressedFiles(results);
+    } catch (error) {
+      console.error(error);
+      Swal.fire({
+        icon: "error",
+        title: "Compression failed",
+        text: "Something went wrong while compressing your images.",
+        confirmButtonText: "Okay",
+      });
+    } finally {
+      setIsCompressing(false);
+    }
   };
 
-  image.src = URL.createObjectURL(selectedFile);
-};
-
-  const downloadImage = () => {
-    if (!compressedFile) return;
-
-    const url = URL.createObjectURL(compressedFile);
+  // Download one image
+  const downloadImage = (file) => {
+    const url = URL.createObjectURL(file);
 
     const link = document.createElement("a");
+
     link.href = url;
-    link.download = compressedFile.name;
+    link.download = file.name;
 
     document.body.appendChild(link);
     link.click();
+
     document.body.removeChild(link);
 
     URL.revokeObjectURL(url);
   };
 
-return (
-  <div className="app">
-    <div className="container">
+  // Reset
+  const resetApp = () => {
+    selectedFiles.forEach((item) => {
+      URL.revokeObjectURL(item.preview);
+    });
 
-      {!compressedFile ? (
-        <>
-          {/* HEADER */}
+    setSelectedFiles([]);
+    setCompressedFiles([]);
+    setTargetSize("");
+    setIsCompressing(false);
 
-          <h1>Compress your image</h1>
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
-          <p className="subtitle">
-            Reduce your image size without losing quality.
-          </p>
+  return (
+    <div className="app">
+      <div className="container">
 
-          {/* UPLOAD */}
+        {compressedFiles.length === 0 ? (
+          <>
+            {/* HEADER */}
 
-          <div className="upload-box">
-            <div className="upload-icon">↑</div>
+            <div className="header">
+              <h1>Compress your images</h1>
 
-            <h2>
-              {selectedFile
-                ? selectedFile.name
-                : "Upload your image"}
-            </h2>
+              <p className="subtitle">
+                Reduce image size to your required size.
+              </p>
+            </div>
 
-            <p>
-              {selectedFile
-                ? `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB`
-                : "JPG, JPEG or PNG"}
-            </p>
+            {/* UPLOAD */}
 
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={handleFileChange}
-              style={{ display: "none" }}
-            />
+            <div
+              className="upload-box"
+              onClick={handleChooseImage}
+            >
+              <div className="upload-icon">
+                ↑
+              </div>
 
-            <button onClick={handleChooseImage}>
-              Choose Image
-            </button>
-          </div>
+              <h2>
+                {selectedFiles.length > 0
+                  ? `${selectedFiles.length} image${selectedFiles.length > 1
+                    ? "s"
+                    : ""
+                  } selected`
+                  : "Upload your images"}
+              </h2>
 
-          {/* SIZE */}
+              <p>
+                JPG, JPEG, PNG or WebP
+              </p>
 
-          <div className="size-section">
-           
-
-            <div className="size-input">
               <input
-                type="number"
-                placeholder="Enter required size"
-                min="1"
-                value={targetSize}
-                onChange={(e) => setTargetSize(e.target.value)}
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                onChange={handleFileChange}
+                style={{ display: "none" }}
               />
 
-              <span>KB</span>
-            </div>
-          </div>
-
-          {/* COMPRESS */}
-
-          <button
-            className="compress-button"
-            onClick={compressImage}
-            disabled={isCompressing}
-          >
-            {isCompressing
-              ? "Compressing..."
-              : "Compress Image"}
-          </button>
-        </>
-      ) : (
-        <>
-          {/* RESULT SCREEN */}
-
-          <div className="success-icon">
-            ✓
-          </div>
-
-          <h1>Image Ready</h1>
-
-          <p className="subtitle">
-            Your image has been compressed successfully.
-          </p>
-
-          <div className="result">
-
-            <div className="result-row">
-              <span>Original Size</span>
-
-              <strong>
-                {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-              </strong>
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleChooseImage();
+                }}
+              >
+                Choose Images
+              </button>
             </div>
 
-            <div className="result-row">
-              <span>Compressed Size</span>
+            {/* SELECTED IMAGES */}
 
-              <strong>
-                {(compressedFile.size / 1024).toFixed(2)} KB
-              </strong>
+            {selectedFiles.length > 0 && (
+              <div className="selected-section">
+
+                <div className="section-heading">
+                  <span>
+                    Selected Images
+                  </span>
+
+                  <span>
+                    {selectedFiles.length}
+                  </span>
+                </div>
+
+                <div className="image-list">
+
+                  {selectedFiles.map((item) => (
+                    <div
+                      className="image-card"
+                      key={item.id}
+                    >
+                      <img
+                        src={item.preview}
+                        alt={item.file.name}
+                        className="image-thumbnail"
+                      />
+
+                      <div className="image-info">
+                        <strong>
+                          {item.file.name}
+                        </strong>
+
+                        <span>
+                          {(
+                            item.file.size /
+                            1024 /
+                            1024
+                          ).toFixed(2)}{" "}
+                          MB
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="remove-button"
+                        onClick={() =>
+                          removeImage(item.id)
+                        }
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+
+                </div>
+              </div>
+            )}
+
+            {/* TARGET SIZE */}
+
+            <div className="size-section">
+
+              <label>
+                Target Size
+              </label>
+
+              <div className="size-input">
+
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="Enter required size"
+                  value={targetSize}
+                  onChange={(event) =>
+                    setTargetSize(
+                      event.target.value
+                    )
+                  }
+                />
+
+                <span>KB</span>
+
+              </div>
+
             </div>
 
-            <div className="result-row">
-              <span>Target Size</span>
+            {/* COMPRESS */}
 
+            <button
+              className="compress-button"
+              onClick={compressImages}
+              disabled={isCompressing}
+            >
+              {isCompressing
+                ? "Compressing..."
+                : selectedFiles.length > 1
+                  ? `Compress ${selectedFiles.length} Images`
+                  : "Compress Image"}
+            </button>
+          </>
+        ) : (
+          <>
+            {/* RESULT HEADER */}
+
+            <div className="success-icon">
+              ✓
+            </div>
+
+            <h1>Images Ready</h1>
+
+            <p className="subtitle">
+              {compressedFiles.length} image
+              {compressedFiles.length > 1
+                ? "s"
+                : ""}{" "}
+              compressed successfully.
+            </p>
+
+            {/* RESULT LIST */}
+
+            <div className="result-list">
+
+              {compressedFiles.map((item) => (
+                <div
+                  className="result-card"
+                  key={item.id}
+                >
+                  <img
+                    src={item.preview}
+                    alt={item.originalFile.name}
+                    className="result-thumbnail"
+                  />
+
+                  <div className="result-info">
+
+                    <strong>
+                      {item.originalFile.name}
+                    </strong>
+
+                    <div className="size-details">
+                      <span>
+                        {(
+                          item.originalFile.size /
+                          1024 /
+                          1024
+                        ).toFixed(2)}{" "}
+                        MB
+                      </span>
+
+                      <span className="arrow">
+                        →
+                      </span>
+
+                      <span className="result-size">
+                        {(
+                          item.compressedFile.size /
+                          1024
+                        ).toFixed(2)}{" "}
+                        KB
+                      </span>
+                    </div>
+
+                  </div>
+
+                  <button
+                    type="button"
+                    className="small-download"
+                    onClick={() =>
+                      downloadImage(
+                        item.compressedFile
+                      )
+                    }
+                  >
+                    Download
+                  </button>
+
+                </div>
+              ))}
+
+            </div>
+
+            {/* TARGET */}
+
+            <div className="target-info">
+              Target size:{" "}
               <strong>
                 {targetSize} KB
               </strong>
             </div>
 
-          </div>
+            {/* AGAIN */}
 
-          <button
-            className="compress-button"
-            onClick={downloadImage}
-          >
-            Download Image
-          </button>
+            <button
+              className="again-button"
+              onClick={resetApp}
+            >
+              Compress More Images
+            </button>
+          </>
+        )}
 
-          <button
-            className="again-button"
-            onClick={() => {
-              setSelectedFile(null);
-              setCompressedFile(null);
-              setTargetSize("");
-              setIsCompressing(false);
-
-              if (fileInputRef.current) {
-                fileInputRef.current.value = "";
-              }
-            }}
-          >
-            Compress Another Image
-          </button>
-        </>
-      )}
-
+      </div>
     </div>
-  </div>
-);
+  );
 }
 
 export default App;
