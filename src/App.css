@@ -1,0 +1,435 @@
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    Arial,
+    sans-serif;
+
+  color: #171717;
+  background: #f5f5f5;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background:
+    radial-gradient(circle at top, #ffffff 0%, #f5f5f5 45%, #eeeeee 100%);
+}
+
+button,
+input {
+  font: inherit;
+}
+
+/* =========================
+   APP
+========================= */
+
+.app {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 30px 15px;
+}
+
+/* =========================
+   MAIN CARD
+========================= */
+
+.container {
+  width: 100%;
+  max-width: 560px;
+  background: rgba(255, 255, 255, 0.96);
+  padding-top: 10px;
+  padding-left: 20px;
+  padding-right: 20px;
+  padding-bottom: 20px;
+  border: 1px solid #e7e7e7;
+  border-radius: 22px;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+/* =========================
+   HEADER
+========================= */
+
+h1 {
+  margin: 0;
+  margin-bottom: 15px;
+  text-align: center;
+  font-size: 25px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.8px;
+  color: #111111;
+}
+
+.subtitle {
+  margin: 5px 0 15px;
+  text-align: center;
+  color: #777777;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* =========================
+   UPLOAD AREA
+========================= */
+
+.upload-box {
+  border: 1.5px dashed #cfcfcf;
+  border-radius: 12px;
+  padding: 20px 10px;
+  text-align: center;
+  background: #fafafa;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.upload-box:hover {
+  border-color: #999999;
+  background: #f7f7f7;
+}
+
+.upload-icon {
+  width: 54px;
+  height: 40px;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: #111111;
+  color: white;
+  font-size: 25px;
+  font-weight: 300;
+}
+
+.upload-box h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #222222;
+  word-break: break-word;
+}
+
+.upload-box p {
+  margin: 8px 0 20px;
+  color: #888888;
+  font-size: 14px;
+}
+
+.upload-box button {
+  border: 1px solid #111111;
+  background: #111111;
+  color: #ffffff;
+  padding: 4px 15px;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
+}
+
+.upload-box button:hover {
+  background: #2b2b2b;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.12);
+}
+
+.upload-box button:active {
+  transform: scale(0.98);
+}
+
+/* =========================
+   SIZE SECTION
+========================= */
+
+.size-section {
+  margin-top: 10px;
+}
+
+.size-section label {
+  display: block;
+  margin-bottom: 9px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333333;
+}
+
+/* =========================
+   SIZE INPUT
+========================= */
+
+.size-input {
+  display: flex;
+  height: 50px;
+  border: 1px solid #dcdcdc;
+  border-radius: 10px;
+  overflow: hidden;
+  background: white;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.size-input:focus-within {
+  border-color: #111111;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.06);
+}
+
+.size-input input {
+  width: 100%;
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 0 15px;
+  font-size: 16px;
+  color: #111111;
+  background: transparent;
+}
+
+.size-input input::placeholder {
+  color: #b0b0b0;
+}
+
+.size-input span {
+  min-width: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 15px;
+  background: #f3f3f3;
+  border-left: 1px solid #dedede;
+  color: #555555;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Remove number input arrows */
+
+.size-input input::-webkit-outer-spin-button,
+.size-input input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.size-input input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+/* =========================
+   COMPRESS BUTTON
+========================= */
+
+.compress-button {
+  width: 100%;
+  height: 52px;
+  margin-top: 24px;
+  border: none;
+  border-radius: 10px;
+  background: #111111;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.1px;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
+}
+
+.compress-button:hover {
+  background: #292929;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.14);
+}
+
+.compress-button:active {
+  transform: translateY(1px);
+}
+
+.compress-button:disabled {
+  background: #999999;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* =========================
+   RESULT
+========================= */
+
+.result {
+  margin-top: 24px;
+  padding: 20px;
+  border: 1px solid #e4e4e4;
+  border-radius: 14px;
+  background: #fafafa;
+}
+
+.result p {
+  margin: 7px 0;
+  font-size: 14px;
+  color: #555555;
+}
+
+.result p:last-of-type {
+  margin-bottom: 16px;
+  color: #111111;
+  font-weight: 600;
+}
+
+.result button {
+  width: 100%;
+  height: 46px;
+  border: 1px solid #d7d7d7;
+  border-radius: 9px;
+  background: white;
+  color: #111111;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.result button:hover {
+  background: #f3f3f3;
+  border-color: #bbbbbb;
+}
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 600px) {
+  .app {
+    padding: 20px 14px;
+    align-items: flex-start;
+  }
+
+  .container {
+    margin-top: 20px;
+    padding: 28px 20px;
+    border-radius: 18px;
+  }
+
+  h1 {
+    font-size: 27px;
+  }
+
+  .subtitle {
+    font-size: 14px;
+    margin-bottom: 26px;
+  }
+
+  .upload-box {
+    padding: 28px 18px;
+  }
+}
+/* =========================
+   SUCCESS ICON
+========================= */
+
+.success-icon {
+  width: 38px;
+  height: 38px;
+  margin: 0 auto 10px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background: #4BB543;
+  color: white;
+
+  font-size: 28px;
+  font-weight: 500;
+}
+
+/* =========================
+   RESULT
+========================= */
+
+.result {
+  margin-top: 28px;
+  padding: 6px 20px;
+
+  border: 1px solid #e5e5e5;
+  border-radius: 14px;
+
+  background: #fafafa;
+}
+
+.result-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 16px 0;
+
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.result-row:last-child {
+  border-bottom: none;
+}
+
+.result-row span {
+  color: #777777;
+  font-size: 14px;
+}
+
+.result-row strong {
+  color: #111111;
+  font-size: 14px;
+}
+
+/* =========================
+   AGAIN BUTTON
+========================= */
+
+.again-button {
+  width: 100%;
+  height: 48px;
+
+  margin-top: 12px;
+
+  border: 1px solid #dddddd;
+  border-radius: 10px;
+
+  background: white;
+  color: #333333;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.again-button:hover {
+  background: #f5f5f5;
+  border-color: #c5c5c5;
+}
